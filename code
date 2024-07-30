@@ -1,0 +1,355 @@
+##  1.. Data Collection !
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+import glob
+
+glob.glob(r'C:\Users\rosha\STOCK_MARKET\individual_stocks_5yr/*csv')
+
+len(glob.glob(r'C:\Users\rosha\STOCK_MARKET\individual_stocks_5yr/*csv')) ## total files we have 
+
+
+
+# lets store files of those stock that we have to consider for analysis ..
+
+company_list = [r'C:\\Users\\rosha\\STOCK_MARKET\\individual_stocks_5yr\\AAPL_data.csv',
+             r'C:\\Users\\rosha\\STOCK_MARKET\\individual_stocks_5yr\\AMZN_data.csv',
+             r'C:\\Users\\rosha\\STOCK_MARKET\\individual_stocks_5yr\\GOOG_data.csv',
+             r'C:\\Users\\rosha\\STOCK_MARKET\\individual_stocks_5yr\\MSFT_data.csv',]
+
+## use Warnings package to get rid of any future warning ..
+
+import warnings
+from warnings import filterwarnings
+filterwarnings('ignore')
+
+
+
+### in the utube case-study , we have used pandas concat() to collect data from various files ..
+## so this time , lets use pandas append() to do same task..
+
+all_data=pd.DataFrame()
+for file in company_list:
+    current_df=pd.read_csv(file)
+    all_data=current_df._append(all_data, ignore_index=True)
+
+all_data.shape ## dimensions of all_data dataframe ..
+
+all_data.head(6)
+
+all_data['Name'].unique()
+
+
+
+
+
+
+
+
+
+## 2.. Analysing change in price of the stock overtime !
+
+all_data.isnull().sum() ## checking missing values 
+
+all_data.dtypes ## checking data-types 
+
+
+
+all_data['date'] = pd.to_datetime(all_data['date']) ## converting data-type of "date" featuer into date-time ..
+
+all_data['date']
+
+
+
+tech_list = all_data['Name'].unique()
+
+tech_list
+
+
+
+plt.figure(figsize=(20,12))
+
+for index , company in enumerate(tech_list , 1):
+    plt.subplot(2 , 2 , index) ## creating subplot for each stock
+    filter1 = all_data['Name']==company
+    df = all_data[filter1]
+    plt.plot(df['date'] , df['close']) ## plotting "date" vs "close"
+    plt.title(company)
+
+
+
+
+
+
+
+
+
+## 3.. moving average of the various stocks !
+
+all_data.head(15)
+
+
+
+all_data['close'].rolling(window=10).mean().head(14)
+
+new_data = all_data.copy()
+
+#### now lets consider different windows of rolling ,ie 10 days ,20 days ,30 days 
+ma_day = [10 ,20 , 50]
+
+for ma in ma_day:
+    new_data['close_'+str(ma)] = new_data['close'].rolling(ma).mean()
+
+new_data.tail(7)
+
+
+
+new_data.set_index('date' , inplace=True)
+
+new_data
+
+new_data.columns
+
+plt.figure(figsize=(20,12))
+
+for index , company in enumerate(tech_list , 1):
+    plt.subplot(2 , 2 , index)
+    filter1 = new_data['Name']==company
+    df = new_data[filter1]
+    df[['close_10','close_20', 'close_50']].plot(ax=plt.gca())
+    plt.title(company)
+
+
+
+
+
+
+
+## 4.. analyse Closing price change in apple stock !
+##### Daily Stock Return Formula
+    To calculate how much you gained or lost per day for a stock, subtract the opening price from the closing price. Then, multiply the result by the number of shares you own in the company. 
+
+company_list
+
+apple = pd.read_csv(r'C:\\Users\\rosha\\STOCK_MARKET\\individual_stocks_5yr\\AAPL_data.csv')
+
+apple.head(4)
+
+apple['close']
+
+apple.head(4)
+
+apple['Daily return(in %)'] = apple['close'].pct_change() * 100
+
+### pct_change() returns : Percentage change between the current and a prior element.
+
+apple.head(4)
+
+
+
+import plotly.express as px
+
+px.line(apple , x="date" , y="Daily return(in %)") ## Plotting Line-plot of "date" vs "Daily return(in %)"..
+
+
+
+
+
+
+
+## 5.. Performing resampling analysis of closing price ..
+
+
+    Before doing resampling,first u have to make your date feature 'row-index' so that u can resample data on various basis :
+    
+    a..yearly('Y')  , 
+    b..quarterly('Q')   ,
+    c..monthly('M') ,
+    d..weekly basis ('W'), 
+    e..Daily_basis('D')  
+    f..minutes ('3T') , 
+    g..30 second bins('30S')   ,
+    h..resample('17min')
+
+
+
+apple.dtypes
+
+apple['date'] =pd.to_datetime(apple['date'])
+
+apple.dtypes
+
+apple.head(4)
+
+apple.set_index('date' , inplace=True)
+
+apple.head(4)
+
+
+
+apple['close'].resample('M').mean() ## resample data on monthly basis ..
+
+apple['close'].resample('M').mean().plot()
+
+
+
+apple['close'].resample('Y').mean() ## resample data on Yearly basis ..
+
+apple['close'].resample('Y').mean().plot() 
+
+
+
+apple['close'].resample('Q').mean() ## resample data on Quarterly basis ..
+
+apple['close'].resample('Q').mean().plot()
+
+
+
+
+
+
+
+## 6.. Whether closing prices of these tech companies (Amazon,Apple,Google,Microsoft) are correlated or not !
+
+company_list
+
+company_list[0]
+
+app = pd.read_csv(company_list[0])
+amzn = pd.read_csv(company_list[1])
+google = pd.read_csv(company_list[2])
+msft = pd.read_csv(company_list[3])
+
+closing_price = pd.DataFrame()
+
+closing_price['apple_close'] = app['close']
+closing_price['amzn_close'] = amzn['close']
+closing_price['goog_close'] = google['close']
+closing_price['msft_close'] = msft['close']
+
+closing_price
+
+'''
+    Pair-plot is all about , we can considering some pairs & 
+    we are trying to plot scatterplot of it..
+    
+    Unique plots : 4c2 = 6 unique plots
+    
+    Total plots : 15 ( 6 unique + 6 mirror images of these 
+    unique one + 3 diagonal plots(histogram))
+
+'''
+
+
+# Dis-advantages: 
+## Can't be used when number of features are high.
+## Cannot visualize higher dimensional patterns in 3-D and 4-D. 
+## Only possible to view 2D patterns.
+
+
+
+# NOTE: the diagnol elements are (histogram) for each feature.
+
+sns.pairplot(closing_price)
+
+
+
+
+
+closing_price.corr()
+
+
+
+#### co-relation plot for stock prices
+
+sns.heatmap(closing_price.corr() , annot=True)
+
+'''
+
+Conclusions : 
+Closing price of Google and Microsoft are well correlated
+& Closing price of Amazon and Microsoft have a co-relation of 0.96
+
+
+'''
+
+
+
+
+
+
+
+## 7.. analyse Whether Daily change in Closing price of stocks or Daily Returns in Stock are co-related or not !
+
+closing_price
+
+closing_price['apple_close']
+
+closing_price['apple_close'].shift(1)
+
+(closing_price['apple_close'] - closing_price['apple_close'].shift(1))/closing_price['apple_close'].shift(1) * 100
+
+
+
+for col in closing_price.columns:
+    closing_price[col + '_pct_change'] = (closing_price[col] - closing_price[col].shift(1))/closing_price[col].shift(1) * 100
+
+closing_price
+
+closing_price.columns
+
+clsing_p = closing_price[['apple_close_pct_change', 'amzn_close_pct_change',
+       'goog_close_pct_change', 'msft_close_pct_change']]
+
+clsing_p
+
+
+
+### since we have used Pairplot already , lets use extension of Pairplot , ie Pairgrid :
+
+'''
+Pairplot : we have histogram on diagonals & scatterplot/kde/
+            any_other_plot which tells dist.. on rest of the plot 
+
+
+Pairgrid : Once we create grid , we can set plot as per our need : 
+
+ie , if we have 4 features , it creates total 16 graphs/plots or matrices of 4*4
+
+
+
+    There would be various possibilities for type of plots in our Pairgrid which we can set as per our need :
+
+    a) all plots can be scatterplot
+    b) on diagonal , we have histogram & rest will be scatterplot
+    c) on diagonal , we have histogram & rest will be kdeplot 
+    c) on diagonal , we have histogram & below diagonal will be kdeplot
+            & upper diagonal will be scatterplot 
+
+Note :: kdeplot for 2 features also known as contour plots which returns density
+but kdeplot returns distribution if we are performing univariate analysis else it will show density ..
+
+'''
+
+g = sns.PairGrid(data= clsing_p)
+g.map_diag(sns.histplot)
+g.map_lower(sns.scatterplot)
+g.map_upper(sns.kdeplot)
+
+'''
+
+Conclusion :
+While Comparing 'AAPL_close_pct_change' to 'AMZN_close_pct_change'  , it shows a linear relationship upto some extent..
+
+
+'''
+
+clsing_p.corr()
+
+
+
+
+
